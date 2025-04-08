@@ -7,12 +7,14 @@ import mcpRoutes from "./routes/mcp.route"
 import orderRoutes from "./routes/order.route"
 import partnerRoutes from "./routes/partner.route"
 import walletRoutes from "./routes/wallet.route"
+import cookieParser from "cookie-parser"
 
 const app = e()
 const PORT = 8000
 
+app.use(cookieParser())
 app.use(e.json())
-app.use(cors({origin:"*",credentials:true}))
+app.use(cors({origin:"http://localhost:3000",credentials:true}))
 mongoose.connect('mongodb+srv://anishsuman2305:iJuk2MPDEPECgScS@cluster0.76uatyj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
     .then(()=>{
         console.log("Databse connected")
@@ -24,7 +26,7 @@ mongoose.connect('mongodb+srv://anishsuman2305:iJuk2MPDEPECgScS@cluster0.76uatyj
 app.use("/auth", authRoutes);
 app.use("/mcp",mcpRoutes)
 app.use("/order",orderRoutes)
-app.use("/partner",partnerRoutes)
+app.use("/partners",partnerRoutes)
 app.use("/wallet",walletRoutes)
 
 app.listen(PORT, () => {

@@ -4,7 +4,6 @@ import User from '../models/user.model';
 import MCPPartner from '../models/pickupPartner.model';
 import Notification from '../models/notification.model';
 
-// Define custom Request type to include the user property
 interface AuthenticatedRequest extends Request {
   user: {
     _id: mongoose.Types.ObjectId;
@@ -46,7 +45,7 @@ const addPartner = async (req: AuthenticatedRequest, res: Response): Promise<voi
   
   try {
     const mcpId = req.user._id;
-    
+    console.log(req.body)
     const { 
       fullName, 
       email, 
@@ -81,9 +80,9 @@ const addPartner = async (req: AuthenticatedRequest, res: Response): Promise<voi
       role: 'PICKUP_PARTNER',
       status: 'ACTIVE'
     });
-    
+    console.log(newPartner)
     const savedPartner = await newPartner.save({ session });
-    
+    console.log(savedPartner)
     const relationship = new MCPPartner({
       mcpId,
       partnerId: savedPartner._id,
@@ -153,7 +152,6 @@ const getPartnerDetails = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
     
-    // Find relationship
     const relationship = await MCPPartner.findOne({ 
       mcpId, 
       partnerId 

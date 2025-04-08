@@ -58,7 +58,7 @@ const login = async (req: Request, res: Response, next: NextFunction): Promise<v
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || "1234567",
+      "123456",
       { expiresIn: "1d" }
     );
 
@@ -66,7 +66,7 @@ const login = async (req: Request, res: Response, next: NextFunction): Promise<v
       .cookie("uuid", token, {
         httpOnly: true,
         sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        secure: true,
       })
       .status(200)
       .json({ message: "User logged in", token });
