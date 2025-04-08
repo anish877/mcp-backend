@@ -6,6 +6,14 @@ import Transaction from '../models/transaction.model';
 import Notification from '../models/notification.model';
 import  MCPPartner  from '../models/pickupPartner.model';
 
+// Define custom Request type to include the user property
+interface AuthenticatedRequest extends Request {
+    user: {
+      _id: mongoose.Types.ObjectId;
+      role: string;
+    };
+  }
+
   const getAllOrders = async (req: Request, res: Response): Promise<void> =>{
     try {
       const { status, startDate, endDate, mcpId, partnerId } = req.query;
@@ -38,10 +46,11 @@ import  MCPPartner  from '../models/pickupPartner.model';
       });
     }
   }
-  const createOrder = async (req: Request, res: Response): Promise<void> =>{
+  const createOrder = async (req: AuthenticatedRequest, res: Response): Promise<void> =>{
     try {
-      const { customerId, mcpId, orderAmount, location } = req.body;
-      
+      const { orderAmount, location } = req.body;
+      const customerId = req.user._id
+      const mcpId = req.user._id
       const order = await Order.create({
         customerId,
         mcpId,
@@ -49,7 +58,7 @@ import  MCPPartner  from '../models/pickupPartner.model';
         location,
         status: 'PENDING'
       });
-      
+      console.log(order)
       await Notification.create({
         userId: mcpId,
         title: 'New Order Received',
@@ -63,6 +72,7 @@ import  MCPPartner  from '../models/pickupPartner.model';
         data: order
       });
     } catch (error) {
+        console.log(error)
       res.status(500).json({
         success: false,
         message: 'Error creating order'

@@ -25,7 +25,7 @@ mongoose.connect('mongodb+srv://anishsuman2305:iJuk2MPDEPECgScS@cluster0.76uatyj
 
 app.use("/auth", authRoutes);
 app.use("/mcp",mcpRoutes)
-app.use("/order",orderRoutes)
+app.use("/orders",orderRoutes)
 app.use("/partners",partnerRoutes)
 app.use("/wallet",walletRoutes)
 

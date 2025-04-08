@@ -5,6 +5,7 @@ import OrderController from "../controller/order.controller"
 const router = express.Router()
 
 router.get("/",authMiddleware,(req,res)=>OrderController.getAllOrders(req,res))
+//@ts-ignore
 router.post("/",authMiddleware,(req,res)=>OrderController.createOrder(req,res))
 router.get("/:orderId",authMiddleware,(req,res)=>OrderController.getOrderDetails(req,res))
 router.put("/:orderId/assign",authMiddleware,(req,res)=>OrderController.assignOrder(req,res))
