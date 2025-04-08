@@ -2,6 +2,24 @@ import { Request, Response } from 'express';
 import Transaction from '../models/transaction.model';
 import mongoose from 'mongoose';
 
+// Define the authenticated request interface
+interface AuthenticatedRequest extends Request {
+  user: {
+    _id: mongoose.Types.ObjectId;
+  };
+}
+
+// Define the transaction model with paginate method
+interface TransactionModel extends mongoose.Model<any> {
+  paginate: (query: any, options: any) => Promise<{
+    docs: any[];
+    totalDocs: number;
+    page: number;
+    totalPages: number;
+    limit: number;
+  }>;
+}
+
 interface TransactionQueryParams {
   page?: string;
   limit?: string;
@@ -12,7 +30,8 @@ interface TransactionQueryParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
-const getTransactions = async (req: Request, res: Response): Promise<void> => {
+
+const getTransactions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user._id;
   const { 
     page = '1', 
@@ -39,7 +58,7 @@ const getTransactions = async (req: Request, res: Response): Promise<void> => {
     }
     
     if (startDate || endDate) {
-      query.createdAt = {};
+      query.createdAt = {} as { $gte?: Date; $lte?: Date };
       
       if (startDate) {
         query.createdAt.$gte = new Date(startDate);
@@ -51,7 +70,7 @@ const getTransactions = async (req: Request, res: Response): Promise<void> => {
     }
 
     const sort: { [key: string]: 1 | -1 } = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortBy || 'createdAt'] = sortOrder === 'asc' ? 1 : -1;
 
     const options = {
       page: parseInt(page),
@@ -64,7 +83,8 @@ const getTransactions = async (req: Request, res: Response): Promise<void> => {
       ]
     };
 
-    const transactions = await Transaction.paginate(query, options);
+    // Cast Transaction to TransactionModel to use paginate method
+    const transactions = await (Transaction as unknown as TransactionModel).paginate(query, options);
 
     res.status(200).json({
       success: true,
@@ -84,13 +104,13 @@ const getTransactions = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const getTransactionDetails = async (req: Request, res: Response): Promise<void> => {
+const getTransactionDetails = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user._id;
   const { transactionId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(transactionId)) {
     res.status(400).json({ success: false, message: 'Invalid transaction ID' });
-    return
+    return;
   }
 
   try {
@@ -100,18 +120,26 @@ const getTransactionDetails = async (req: Request, res: Response): Promise<void>
       .populate('orderId');
 
     if (!transaction) {
-        res.status(404).json({ success: false, message: 'Transaction not found' });
-        return
+      res.status(404).json({ success: false, message: 'Transaction not found' });
+      return;
     }
 
-    const isFromUser = transaction.fromUserId && 
-      (transaction.fromUserId as any)._id.toString() === userId.toString();
-    const isToUser = transaction.toUserId && 
-      (transaction.toUserId as any)._id.toString() === userId.toString();
+    // Type assertion to handle populated models
+    interface PopulatedUser {
+      _id: mongoose.Types.ObjectId;
+      fullName: string;
+      email: string;
+    }
+
+    const fromUser = transaction.fromUserId as unknown as PopulatedUser;
+    const toUser = transaction.toUserId as unknown as PopulatedUser;
+
+    const isFromUser = fromUser && fromUser._id.toString() === userId.toString();
+    const isToUser = toUser && toUser._id.toString() === userId.toString();
 
     if (!isFromUser && !isToUser) {
-        res.status(403).json({ success: false, message: 'Access denied' });
-        return
+      res.status(403).json({ success: false, message: 'Access denied' });
+      return;
     }
 
     res.status(200).json({
@@ -124,9 +152,13 @@ const getTransactionDetails = async (req: Request, res: Response): Promise<void>
   }
 };
 
-const getTransactionSummary = async (req: Request, res: Response): Promise<void> => {
+interface PeriodQuery {
+  period?: 'week' | 'month' | 'year';
+}
+
+const getTransactionSummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user._id;
-  const { period = 'month' } = req.query;
+  const { period = 'month' } = req.query as PeriodQuery;
   
   try {
     const endDate = new Date();
@@ -208,9 +240,16 @@ const getTransactionSummary = async (req: Request, res: Response): Promise<void>
   }
 };
 
-const exportTransactions = async (req: Request, res: Response): Promise<void> => {
+interface ExportTransactionQuery {
+  format?: 'json' | 'csv';
+  startDate?: string;
+  endDate?: string;
+  type?: 'ADD_MONEY' | 'TRANSFER' | 'WITHDRAW' | 'PAYMENT' | 'REFUND';
+}
+
+const exportTransactions = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user._id;
-  const { format = 'json', startDate, endDate, type } = req.query as any;
+  const { format = 'json', startDate, endDate, type } = req.query as ExportTransactionQuery;
   
   try {
     const query: any = {
@@ -222,7 +261,7 @@ const exportTransactions = async (req: Request, res: Response): Promise<void> =>
     }
     
     if (startDate || endDate) {
-      query.createdAt = {};
+      query.createdAt = {} as { $gte?: Date; $lte?: Date };
       
       if (startDate) {
         query.createdAt.$gte = new Date(startDate);
@@ -232,12 +271,29 @@ const exportTransactions = async (req: Request, res: Response): Promise<void> =>
         query.createdAt.$lte = new Date(endDate);
       }
     }
+
+    interface PopulatedTransaction {
+      _id: mongoose.Types.ObjectId;
+      createdAt: Date;
+      type: string;
+      status: string;
+      amount: number;
+      fromUserId: {
+        fullName: string;
+        email: string;
+      } | null;
+      toUserId: {
+        fullName: string;
+        email: string;
+      } | null;
+      description?: string;
+    }
     
     const transactions = await Transaction.find(query)
       .populate('fromUserId', 'fullName email')
       .populate('toUserId', 'fullName email')
       .sort({ createdAt: -1 })
-      .lean();
+      .lean() as PopulatedTransaction[];
     
     const formattedTransactions = transactions.map(transaction => ({
       id: transaction._id.toString(),
@@ -246,19 +302,19 @@ const exportTransactions = async (req: Request, res: Response): Promise<void> =>
       type: transaction.type,
       status: transaction.status,
       amount: transaction.amount,
-      from: transaction.fromUserId ? (transaction.fromUserId as any).fullName : 'N/A',
-      to: transaction.toUserId ? (transaction.toUserId as any).fullName : 'N/A',
+      from: transaction.fromUserId ? transaction.fromUserId.fullName : 'N/A',
+      to: transaction.toUserId ? transaction.toUserId.fullName : 'N/A',
       description: transaction.description || 'N/A'
     }));
     
     if (format === 'csv') {
-    res.status(200).json({
+      res.status(200).json({
         success: true,
         data: 'CSV generation would happen here',
         message: 'CSV export feature not fully implemented'
       });
     } else {
-        res.status(200).json({
+      res.status(200).json({
         success: true,
         data: formattedTransactions
       });
@@ -269,6 +325,11 @@ const exportTransactions = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-const TransactionController = {getTransactionDetails,getTransactions,getTransactionSummary,exportTransactions}
+const TransactionController = {
+  getTransactionDetails,
+  getTransactions,
+  getTransactionSummary,
+  exportTransactions
+};
 
-export default TransactionController
+export default TransactionController;

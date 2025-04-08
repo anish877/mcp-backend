@@ -14,6 +14,7 @@ interface RegisterRequestBody {
 
 const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log(req.body)
     const { fullName, email, password, phone, role }: RegisterRequestBody = req.body;
 
     const existingUser = await User.findOne({ email });

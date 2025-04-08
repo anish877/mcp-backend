@@ -4,6 +4,14 @@ import Transaction from '../models/transaction.model';
 import Notification from '../models/notification.model';
 import mongoose from 'mongoose';
 
+// Define a type for the user object attached to request
+interface UserRequest extends Request {
+  user: {
+    _id: mongoose.Types.ObjectId | string;
+    role?: string;
+  };
+}
+
 interface AddMoneyRequest {
   amount: number;
 }
@@ -23,13 +31,13 @@ interface WithdrawMoneyRequest {
   };
 }
 
-const addMoney = async (req: Request, res: Response): Promise<void> => {
+const addMoney = async (req: UserRequest, res: Response): Promise<void> => {
   const { amount }: AddMoneyRequest = req.body;
   const userId = req.user._id;
 
   if (!amount || amount <= 0) {
     res.status(400).json({ success: false, message: 'Invalid amount' });
-    return
+    return;
   }
 
   const session = await mongoose.startSession();
@@ -43,9 +51,9 @@ const addMoney = async (req: Request, res: Response): Promise<void> => {
     );
 
     if (!user) {
-        await session.abortTransaction();
-        res.status(404).json({ success: false, message: 'User not found' });
-        return
+      await session.abortTransaction();
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
     }
 
     const transaction = await Transaction.create(
@@ -88,13 +96,13 @@ const addMoney = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const transferMoney = async (req: Request, res: Response): Promise<void> => {
+const transferMoney = async (req: UserRequest, res: Response): Promise<void> => {
   const { partnerId, amount, description }: TransferMoneyRequest = req.body;
   const mcpId = req.user._id;
 
   if (!partnerId || !amount || amount <= 0) {
     res.status(400).json({ success: false, message: 'Invalid parameters' });
-    return
+    return;
   }
 
   const session = await mongoose.startSession();
@@ -103,25 +111,32 @@ const transferMoney = async (req: Request, res: Response): Promise<void> => {
   try {
     const mcp = await User.findById(mcpId).session(session);
     if (!mcp || mcp.role !== 'MCP') {
-        await session.abortTransaction();
-        res.status(403).json({ success: false, message: 'Only MCPs can transfer money to partners' });
-        return
+      await session.abortTransaction();
+      res.status(403).json({ success: false, message: 'Only MCPs can transfer money to partners' });
+      return;
     }
 
     if (mcp.wallet < amount) {
-        await session.abortTransaction();
-        res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
-        return
+      await session.abortTransaction();
+      res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
+      return;
     }
 
     const partner = await User.findById(partnerId).session(session);
     if (!partner || partner.role !== 'PICKUP_PARTNER') {
-        await session.abortTransaction();
-        res.status(404).json({ success: false, message: 'Partner not found' });
-        return
+      await session.abortTransaction();
+      res.status(404).json({ success: false, message: 'Partner not found' });
+      return;
     }
 
-    const MCPPartner = mongoose.model('MCPPartner');
+    // Define MCPPartner type
+    interface MCPPartnerDocument extends mongoose.Document {
+      mcpId: mongoose.Types.ObjectId | string;
+      partnerId: mongoose.Types.ObjectId | string;
+      status: string;
+    }
+
+    const MCPPartner = mongoose.model<MCPPartnerDocument>('MCPPartner');
     const partnerRelation = await MCPPartner.findOne({
       mcpId,
       partnerId,
@@ -129,9 +144,9 @@ const transferMoney = async (req: Request, res: Response): Promise<void> => {
     }).session(session);
 
     if (!partnerRelation) {
-        await session.abortTransaction();
-        res.status(403).json({ success: false, message: 'This partner is not associated with your account' });
-        return 
+      await session.abortTransaction();
+      res.status(403).json({ success: false, message: 'This partner is not associated with your account' });
+      return;
     }
 
     // Update MCP wallet (decrease)
@@ -199,13 +214,13 @@ const transferMoney = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const withdrawMoney = async (req: Request, res: Response): Promise<void> => {
+const withdrawMoney = async (req: UserRequest, res: Response): Promise<void> => {
   const { amount, bankDetails }: WithdrawMoneyRequest = req.body;
   const userId = req.user._id;
 
   if (!amount || amount <= 0 || !bankDetails) {
     res.status(400).json({ success: false, message: 'Invalid parameters' });
-    return
+    return;
   }
 
   const session = await mongoose.startSession();
@@ -215,15 +230,15 @@ const withdrawMoney = async (req: Request, res: Response): Promise<void> => {
     const user = await User.findById(userId).session(session);
     
     if (!user) {
-        await session.abortTransaction();
-        res.status(404).json({ success: false, message: 'User not found' });
-        return
+      await session.abortTransaction();
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
     }
 
     if (user.wallet < amount) {
-        await session.abortTransaction();
-        res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
-        return
+      await session.abortTransaction();
+      res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
+      return;
     }
 
     await User.findByIdAndUpdate(
@@ -272,15 +287,15 @@ const withdrawMoney = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const getBalance = async (req: Request, res: Response): Promise<void> => {
+const getBalance = async (req: UserRequest, res: Response): Promise<void> => {
   const userId = req.user._id;
 
   try {
     const user = await User.findById(userId).select('wallet');
     
     if (!user) {
-        res.status(404).json({ success: false, message: 'User not found' });
-        return
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
     }
 
     res.status(200).json({
@@ -295,6 +310,11 @@ const getBalance = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-const WalletController = {addMoney,transferMoney,withdrawMoney,getBalance}
+const WalletController = {
+  addMoney,
+  transferMoney,
+  withdrawMoney,
+  getBalance
+};
 
-export default WalletController
+export default WalletController;

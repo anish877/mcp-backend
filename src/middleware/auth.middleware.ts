@@ -10,6 +10,7 @@ const authMiddleware = async (req:Request,res:Response,next:NextFunction)=>{
         res.status(400).json({message: "User not authenticated"})
         return
     }
+    //@ts-ignore
     req.user = user
     next()
 }
