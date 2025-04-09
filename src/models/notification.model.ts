@@ -38,7 +38,7 @@ const NotificationSchema = new mongoose.Schema<INotification>({
   priority: {
     type: String,
     enum: ['low', 'medium', 'high'],
-    default: 'low',
+    default: 'high',
     index: true
   },
   isRead: { 
@@ -48,7 +48,7 @@ const NotificationSchema = new mongoose.Schema<INotification>({
   },
   actionRequired: {
     type: Boolean,
-    default: false,
+    default: true,
     index: true
   },
   referenceId: { 

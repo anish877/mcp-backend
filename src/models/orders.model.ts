@@ -7,11 +7,11 @@ const OrderSchema = new mongoose.Schema({
     orderAmount: { type: Number, required: true },
     status: { type: String, enum: ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'], default: 'PENDING' },
     location: {
-      address: { type: String },
-      coordinates: {
-        latitude: { type: Number },
-        longitude: { type: Number }
-      }
+        address: { type: String, required: true },
+        coordinates: {
+          type: [Number],
+          index: '2dsphere',
+        }
     },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

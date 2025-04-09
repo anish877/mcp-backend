@@ -4,7 +4,6 @@ import Notification from '../models/notification.model';
 
 // Define types for request parameters
 interface GetNotificationsQuery {
-  userId: string;
   page?: string;
   limit?: string;
   type?: string;
@@ -17,13 +16,19 @@ interface UpdateNotificationParams {
   id: string;
 }
 
+interface AuthenticatedRequest extends Request {
+    user: {
+      _id: mongoose.Types.ObjectId;
+      role: string;
+    };
+  }
+
 // Define the controller class
 class NotificationController {
   // Get notifications with filtering, pagination and sorting
-  async getNotifications(req: Request, res: Response): Promise<void> {
+  async getNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const {
-        userId,
         page = '1',
         limit = '10',
         type,
@@ -31,7 +36,7 @@ class NotificationController {
         priority,
         actionRequired
       } = req.query as unknown as GetNotificationsQuery;
-
+      const userId = req.user._id
       if (!userId) {
         res.status(400).json({ success: false, message: 'userId is required' });
         return;
@@ -89,9 +94,10 @@ class NotificationController {
   }
 
   // Create a new notification
-  async createNotification(req: Request, res: Response): Promise<void> {
+  async createNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { userId, title, message, type, referenceId, priority, actionRequired } = req.body;
+      const { title, message, type, referenceId, priority, actionRequired } = req.body;
+      const userId = req.user._id
 
       if (!userId || !title || !message || !type) {
         res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -119,7 +125,7 @@ class NotificationController {
   }
 
   // Mark a notification as read
-  async markAsRead(req: Request, res: Response): Promise<void> {
+  async markAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params as unknown as UpdateNotificationParams;
 
@@ -142,9 +148,9 @@ class NotificationController {
   }
 
   // Mark all notifications as read for a specific user
-  async markAllAsRead(req: Request, res: Response): Promise<void> {
+  async markAllAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { userId } = req.body;
+      const userId = req.user._id;
 
       if (!userId) {
         res.status(400).json({ success: false, message: 'userId is required' });
@@ -186,9 +192,9 @@ class NotificationController {
   }
 
   // Get notification statistics for a user
-  async getNotificationStats(req: Request, res: Response): Promise<void> {
+  async getNotificationStats(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { userId } = req.params;
+      const userId = req.user._id;
 
       if (!userId) {
         res.status(400).json({ success: false, message: 'userId is required' });
