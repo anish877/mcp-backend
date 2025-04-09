@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2"
 
 const TransactionSchema = new mongoose.Schema({
     fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Sender
@@ -11,6 +12,8 @@ const TransactionSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   });
+
+TransactionSchema.plugin(mongoosePaginate);
 
 const Transaction = mongoose.model("Transaction",TransactionSchema)
 

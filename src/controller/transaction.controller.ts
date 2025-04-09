@@ -157,9 +157,10 @@ interface PeriodQuery {
 }
 
 const getTransactionSummary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  console.log("vfsdfd")
   const userId = req.user._id;
   const { period = 'month' } = req.query as PeriodQuery;
-  
+  console.log(userId)
   try {
     const endDate = new Date();
     const startDate = new Date();
@@ -211,7 +212,7 @@ const getTransactionSummary = async (req: AuthenticatedRequest, res: Response): 
         }
       }
     ]);
-
+    console.log(moneySent)
     const totalReceived = moneyReceived.reduce((sum, item) => sum + item.total, 0);
     const totalSent = moneySent.reduce((sum, item) => sum + item.total, 0);
 

@@ -7,6 +7,7 @@ import mcpRoutes from "./routes/mcp.route"
 import orderRoutes from "./routes/order.route"
 import partnerRoutes from "./routes/partner.route"
 import walletRoutes from "./routes/wallet.route"
+import notificationRoutes from "./routes/notification.route"
 import cookieParser from "cookie-parser"
 
 const app = e()
@@ -28,6 +29,7 @@ app.use("/mcp",mcpRoutes)
 app.use("/orders",orderRoutes)
 app.use("/partners",partnerRoutes)
 app.use("/wallet",walletRoutes)
+app.use("/notifications",notificationRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server started at port ${PORT}`);

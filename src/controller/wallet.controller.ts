@@ -3,6 +3,7 @@ import User from '../models/user.model';
 import Transaction from '../models/transaction.model';
 import Notification from '../models/notification.model';
 import mongoose from 'mongoose';
+import PickupPartner from '../models/pickupPartner.model';
 
 // Define a type for the user object attached to request
 interface UserRequest extends Request {
@@ -129,15 +130,8 @@ const transferMoney = async (req: UserRequest, res: Response): Promise<void> => 
       return;
     }
 
-    // Define MCPPartner type
-    interface MCPPartnerDocument extends mongoose.Document {
-      mcpId: mongoose.Types.ObjectId | string;
-      partnerId: mongoose.Types.ObjectId | string;
-      status: string;
-    }
 
-    const MCPPartner = mongoose.model<MCPPartnerDocument>('MCPPartner');
-    const partnerRelation = await MCPPartner.findOne({
+    const partnerRelation = await PickupPartner.findOne({
       mcpId,
       partnerId,
       status: 'ACTIVE'
@@ -194,7 +188,7 @@ const transferMoney = async (req: UserRequest, res: Response): Promise<void> => 
           referenceId: transaction[0]._id
         }
       ],
-      { session }
+      { session, ordered:true }
     );
 
     await session.commitTransaction();
