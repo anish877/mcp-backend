@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import User from "../models/user.model";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 
 interface RegisterRequestBody {
   fullName: string;
@@ -11,6 +12,14 @@ interface RegisterRequestBody {
   phone: string;
   role: "MCP" | "PICKUP_PARTNER";
 }
+
+// Define custom Request type to include the user property
+interface AuthenticatedRequest extends Request {
+    user: {
+      _id: mongoose.Types.ObjectId;
+      role: string;
+    };
+  }
 
 const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -76,5 +85,14 @@ const login = async (req: Request, res: Response, next: NextFunction): Promise<v
   }
 };
 
-const AuthController = { register, login };
+const verify = (req:AuthenticatedRequest,res:Response)=>{
+    try {
+        res.status(200).json({success:true,user:req.user})
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}
+
+const AuthController = { register, login, verify };
 export default AuthController;
